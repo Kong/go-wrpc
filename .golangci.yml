@@ -1,0 +1,52 @@
+linters:
+  enable:
+  - asciicheck
+  - depguard
+  - dogsled
+  - dupl
+  - durationcheck
+  - exportloopref
+  - forbidigo
+  - gci
+  - gocognit
+  - gocritic
+  - gocyclo
+  - goconst
+  - gofmt
+  - gofumpt
+  - goimports
+  - gomnd
+  - gomodguard
+  - gosec
+  - govet
+  - importas
+  - lll
+  - megacheck
+  - misspell
+  - nakedret
+  - nilerr
+  - nolintlint
+  - predeclared
+  - revive
+  - stylecheck
+  - unconvert
+  - unparam
+  - wastedassign
+issues:
+  exclude-rules:
+  - linters:
+    - errcheck
+    text:  "Error return value" # ignore err not checked in test files
+    path: _test\.go
+  - linters:
+      - gocognit
+    path: _test\.go
+  - linters:
+      - revive
+    text:  "dot-imports" # ignore dot imports
+  - linters:
+      - stylecheck
+    text:  "ST1001" # ignore dot imports
+  - linters:
+      - gocritic
+    path: examples

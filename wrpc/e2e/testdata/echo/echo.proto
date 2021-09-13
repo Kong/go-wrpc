@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package test;
+option go_package = "github.com/kong/go-wrpc/wrpc/testdata/echo";
+
+// +wrpc:svc-id=1
+service Echo{
+  // +wrpc:rpc-id=1
+  rpc Echo(EchoRPCRequest) returns (EchoRPCResponse);
+
+  // +wrpc:rpc-id=2
+  rpc Sleep(SleepRequest) returns (SleepResponse);
+
+  // +wrpc:rpc-id=3
+  rpc ProtocolError(ProtocolErrorRequest) returns (ProtocolErrorResponse);
+}
+
+message EchoRPCRequest{
+  string s = 1;
+}
+
+message EchoRPCResponse{
+ string  s = 1;
+}
+
+message SleepRequest{
+  uint32 duration = 1;
+}
+
+message SleepResponse{}
+
+message ProtocolErrorRequest{}
+
+message ProtocolErrorResponse{}
