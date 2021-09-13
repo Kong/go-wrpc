@@ -18,3 +18,5 @@ verify-codegen:
 update-codegen:
 	buf generate
 
+install-tools:
+	./scripts/install-tools.sh
