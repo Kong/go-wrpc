@@ -302,3 +302,11 @@ func (c *Conn) prepareMessageBeforeWrite(m *WebsocketPayload) {
 		m.Payload.Seq = c.nextSeq()
 	}
 }
+
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.wbConn.RemoteAddr()
+}
+
+func (c *Conn) LocalAddr() net.Addr {
+	return c.wbConn.LocalAddr()
+}

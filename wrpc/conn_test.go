@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -12,7 +13,7 @@ import (
 func TestConnReadThread(t *testing.T) {
 	t.Run("connection is closed on a non-binary message",
 		func(t *testing.T) {
-			_, c, cleanup, err := foo()
+			_, c, cleanup, err := setup()
 			if err != nil {
 				t.Errorf("expected nil but got err: %v", err)
 			}
@@ -33,7 +34,7 @@ func TestConnReadThread(t *testing.T) {
 		})
 	t.Run("connection is closed on a malformed binary message",
 		func(t *testing.T) {
-			_, c, cleanup, err := foo()
+			_, c, cleanup, err := setup()
 			if err != nil {
 				t.Errorf("expected nil but got err: %v", err)
 			}
@@ -81,8 +82,32 @@ func TestConnReadThread(t *testing.T) {
 		})
 }
 
+func TestLocalAndRemoteAddr(t *testing.T) {
+	_, c, cleanup, err := setup()
+	if err != nil {
+		t.Errorf("expected no error but got: %v", err)
+	}
+	defer cleanup()
+	remote := c.RemoteAddr()
+	if remote.Network() != "tcp" {
+		t.Errorf("remote: expected 'tcp' but got: %v", remote.Network())
+	}
+	local := c.RemoteAddr()
+	if local.Network() != "tcp" {
+		t.Errorf("local: expected 'tcp' but got: %v", remote.Network())
+	}
+	if !strings.HasPrefix(remote.String(), "127.0.0.1") {
+		t.Errorf("remote: expected 127.0.0.1 as suffix but got: %v",
+			remote.String())
+	}
+	if !strings.HasPrefix(local.String(), "127.0.0.1") {
+		t.Errorf("local: expected 127.0.0.1 as suffix but got: %v",
+			local.String())
+	}
+}
+
 //nolint:unparam
-func foo() (*Peer, *Conn, func(), error) {
+func setup() (*Peer, *Conn, func(), error) {
 	// setup server
 	serverPeer := &Peer{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
