@@ -3,7 +3,7 @@ syntax = "proto3";
 package test;
 option go_package = "github.com/kong/go-wrpc/wrpc/testdata/echo";
 
-// +wrpc:svc-id=1
+// +wrpc:service-id=1
 service Echo{
   // +wrpc:rpc-id=1
   rpc Echo(EchoRPCRequest) returns (EchoRPCResponse);

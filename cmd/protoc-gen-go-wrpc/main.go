@@ -171,7 +171,7 @@ func (g generator) genServer(service *protogen.Service) error {
 	g.gf.P("type ", service.GoName, "Server struct{")
 	g.gf.P(service.GoName, " ",
 		g.gf.QualifiedGoIdent(protogen.
-			GoIdent{GoName: "Echo", GoImportPath: g.file.GoImportPath}))
+			GoIdent{GoName: service.GoName, GoImportPath: g.file.GoImportPath}))
 	g.gf.P("}")
 
 	err := g.genServerFuncs(service)
@@ -236,7 +236,7 @@ func (g generator) genServerRPCCase(rpc *protogen.Method) error {
 }
 
 var (
-	svcRegex = regexp.MustCompile(`^\/\/\s\+wrpc:svc-id=(-?\d+)$`)
+	svcRegex = regexp.MustCompile(`^\/\/\s\+wrpc:service-id=(-?\d+)$`)
 	rpcRegex = regexp.MustCompile(`^\/\/\s\+wrpc:rpc-id=(-?\d+)$`)
 )
 
