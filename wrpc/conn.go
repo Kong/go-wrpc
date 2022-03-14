@@ -82,7 +82,7 @@ func (c *Conn) DoRPC(ctx context.Context,
 	// initiate the RPC
 	resultChan, cleanup, err := c.sendRPCMessage(ctx, m)
 	if err != nil {
-		return Response{}, fmt.Errorf("initiating rpc: %v", err)
+		return Response{}, fmt.Errorf("initiating rpc: %w", err)
 	}
 	defer cleanup()
 
@@ -128,12 +128,12 @@ func (c *Conn) sendRPCMessage(ctx context.Context,
 
 	err = validateMessage(m)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid wRPC message: %v", err)
+		return nil, nil, fmt.Errorf("invalid wRPC message: %w", err)
 	}
 
 	err = c.writeMessage(ctx, m)
 	if err != nil {
-		return nil, nil, fmt.Errorf("write message to socket: %v", err)
+		return nil, nil, fmt.Errorf("write message to socket: %w", err)
 	}
 	return resultChan, cleanup, nil
 }
@@ -191,10 +191,10 @@ func (c *Conn) readThread() error {
 					err := c.sendError(pErr, message)
 					if err != nil {
 						c.errLogger(fmt.Errorf(
-							"wrpc failed to send an error to peer: %v", err))
+							"wrpc failed to send an error to peer: %w", err))
 					}
 				} else {
-					c.errLogger(fmt.Errorf("wrpc message routing failed: %v", err))
+					c.errLogger(fmt.Errorf("wrpc message routing failed: %w", err))
 				}
 			}
 		}()

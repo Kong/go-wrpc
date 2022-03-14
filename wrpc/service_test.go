@@ -14,7 +14,7 @@ func TestRPCImpl_Handler(t *testing.T) {
 	})
 	t.Run("initialized handler returns a handler", func(t *testing.T) {
 		rpc := RPCImpl{
-			HandlerFunc: func(ctx context.Context, decoder func(interface{}) error) (interface{}, error) {
+			HandlerFunc: func(ctx context.Context, p *Peer, decoder func(interface{}) error) (interface{}, error) {
 				return nil, nil
 			},
 		}

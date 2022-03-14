@@ -9,7 +9,7 @@ import (
 )
 
 type Echo interface {
-	Echo(context.Context, *EchoRPCRequest) (*EchoRPCResponse, error)
+	Echo(context.Context, *wrpc.Peer, *EchoRPCRequest) (*EchoRPCResponse, error)
 }
 
 type EchoClient struct {
@@ -38,13 +38,13 @@ func (s *EchoServer) RPC(rpc wrpc.ID) wrpc.RPC {
 	switch rpc {
 	case 1:
 		return wrpc.RPCImpl{
-			HandlerFunc: func(ctx context.Context, decode func(interface{}) error) (interface{}, error) {
+			HandlerFunc: func(ctx context.Context, peer *wrpc.Peer, decode func(interface{}) error) (interface{}, error) {
 				var in EchoRPCRequest
 				err := decode(&in)
 				if err != nil {
 					return nil, err
 				}
-				return s.Echo.Echo(ctx, &in)
+				return s.Echo.Echo(ctx, peer, &in)
 			},
 		}
 	default:

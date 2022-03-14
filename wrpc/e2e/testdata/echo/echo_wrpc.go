@@ -9,9 +9,9 @@ import (
 )
 
 type Echo interface {
-	Echo(context.Context, *EchoRPCRequest) (*EchoRPCResponse, error)
-	Sleep(context.Context, *SleepRequest) (*SleepResponse, error)
-	ProtocolError(context.Context, *ProtocolErrorRequest) (*ProtocolErrorResponse, error)
+	Echo(context.Context, *wrpc.Peer, *EchoRPCRequest) (*EchoRPCResponse, error)
+	Sleep(context.Context, *wrpc.Peer, *SleepRequest) (*SleepResponse, error)
+	ProtocolError(context.Context, *wrpc.Peer, *ProtocolErrorRequest) (*ProtocolErrorResponse, error)
 }
 
 type EchoClient struct {
@@ -60,35 +60,35 @@ func (s *EchoServer) RPC(rpc wrpc.ID) wrpc.RPC {
 	switch rpc {
 	case 1:
 		return wrpc.RPCImpl{
-			HandlerFunc: func(ctx context.Context, decode func(interface{}) error) (interface{}, error) {
+			HandlerFunc: func(ctx context.Context, peer *wrpc.Peer, decode func(interface{}) error) (interface{}, error) {
 				var in EchoRPCRequest
 				err := decode(&in)
 				if err != nil {
 					return nil, err
 				}
-				return s.Echo.Echo(ctx, &in)
+				return s.Echo.Echo(ctx, peer, &in)
 			},
 		}
 	case 2:
 		return wrpc.RPCImpl{
-			HandlerFunc: func(ctx context.Context, decode func(interface{}) error) (interface{}, error) {
+			HandlerFunc: func(ctx context.Context, peer *wrpc.Peer, decode func(interface{}) error) (interface{}, error) {
 				var in SleepRequest
 				err := decode(&in)
 				if err != nil {
 					return nil, err
 				}
-				return s.Echo.Sleep(ctx, &in)
+				return s.Echo.Sleep(ctx, peer, &in)
 			},
 		}
 	case 3:
 		return wrpc.RPCImpl{
-			HandlerFunc: func(ctx context.Context, decode func(interface{}) error) (interface{}, error) {
+			HandlerFunc: func(ctx context.Context, peer *wrpc.Peer, decode func(interface{}) error) (interface{}, error) {
 				var in ProtocolErrorRequest
 				err := decode(&in)
 				if err != nil {
 					return nil, err
 				}
-				return s.Echo.ProtocolError(ctx, &in)
+				return s.Echo.ProtocolError(ctx, peer, &in)
 			},
 		}
 	default:

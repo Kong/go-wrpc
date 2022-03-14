@@ -45,11 +45,23 @@ func (p *Peer) AddConn(conn *Conn) {
 	go func() {
 		err := p.conn.readThread()
 		if err != nil {
-			p.ErrLogger(fmt.Errorf("read thread: %v", err))
+			p.ErrLogger(fmt.Errorf("read thread: %w", err))
 		}
 		// TODO(hbagdi): handle error
 		_ = p.conn.Close()
 	}()
+}
+
+// Clone returns a new Peer with the same registry and logger, ready
+// for either AddConn() or Upgrade()
+func (p *Peer) Clone() *Peer {
+	p.once.Do(p.init)
+	p2 := &Peer{
+		registry:  p.registry,
+		ErrLogger: p.ErrLogger,
+	}
+	p2.once.Do(func() {})
+	return p2
 }
 
 // Upgrade upgrades an HTTP connection to wRPC connection and starts tracking
@@ -85,19 +97,19 @@ func (p *Peer) Do(ctx context.Context, svcID, rpcID ID, input,
 		return err
 	}
 
-	req, err := createRequest(svcID, rpcID, input)
+	req, err := CreateRequest(svcID, rpcID, input)
 	if err != nil {
-		return fmt.Errorf("request: %v", err)
+		return fmt.Errorf("request: %w", err)
 	}
 
 	resp, err := conn.DoRPC(ctx, req)
 	if err != nil {
-		return fmt.Errorf("rpc: %v", err)
+		return fmt.Errorf("rpc: %w", err)
 	}
 
 	err = processResponse(resp, output)
 	if err != nil {
-		return fmt.Errorf("response: %v", err)
+		return fmt.Errorf("response: %w", err)
 	}
 	return nil
 }
@@ -110,7 +122,7 @@ func processResponse(in Response, out interface{}) error {
 	return nil
 }
 
-func createRequest(svcID, rpcID ID, input interface{}) (Request, error) {
+func CreateRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 	data, err := protoMarshal(input)
 	if err != nil {
 		return Request{}, err
@@ -122,6 +134,21 @@ func createRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 		encoding: Encoding_ENCODING_PROTO3,
 		payload:  data,
 	}, nil
+}
+
+func (p *Peer) DoRequest(ctx context.Context, req Request, output proto.Message) error {
+	p.once.Do(p.init)
+
+	resp, err := p.conn.DoRPC(ctx, req)
+	if err != nil {
+		return fmt.Errorf("rpc: %w", err)
+	}
+
+	err = processResponse(resp, output)
+	if err != nil {
+		return fmt.Errorf("response: %w", err)
+	}
+	return nil
 }
 
 type Request struct {
@@ -161,7 +188,7 @@ func (p *Peer) invokeHandler(ctx context.Context, rpc RPC,
 	req Request) (Response, error) {
 	decodeFunc := decoderFunc(req.encoding, req.payload)
 
-	result, err := rpc.Handler()(ctx, decodeFunc)
+	result, err := rpc.Handler()(ctx, p, decodeFunc)
 	if err != nil {
 		return Response{}, err
 	}

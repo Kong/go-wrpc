@@ -17,18 +17,18 @@ type echoImpl struct {
 	prefix string
 }
 
-func (e echoImpl) ProtocolError(_ context.Context,
+func (e echoImpl) ProtocolError(_ context.Context, peer *wrpc.Peer,
 	_ *echo.ProtocolErrorRequest) (*echo.ProtocolErrorResponse, error) {
 	return nil, fmt.Errorf("to err is code")
 }
 
-func (e echoImpl) Sleep(_ context.Context, request *echo.SleepRequest) (
+func (e echoImpl) Sleep(_ context.Context, peer *wrpc.Peer, request *echo.SleepRequest) (
 	*echo.SleepResponse, error) {
 	time.Sleep(time.Duration(request.Duration) * time.Second)
 	return &echo.SleepResponse{}, nil
 }
 
-func (e echoImpl) Echo(_ context.Context, req *echo.EchoRPCRequest) (
+func (e echoImpl) Echo(_ context.Context, peer *wrpc.Peer, req *echo.EchoRPCRequest) (
 	*echo.EchoRPCResponse,
 	error) {
 	return &echo.EchoRPCResponse{
