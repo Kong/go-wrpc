@@ -83,37 +83,6 @@ func (p *Peer) fetchRPC(svcID, rpcID ID) (RPC, error) {
 	return p.registry.Get(svcID, rpcID)
 }
 
-// Do an RPC to the other side using svcID, rpcID,
-// input and returns the output.
-func (p *Peer) Do(ctx context.Context, svcID, rpcID ID, input,
-	output proto.Message) error {
-	p.once.Do(p.init)
-	var err error
-	conn := p.conn
-
-	// verify the RPC is part of registered RPCs
-	_, err = p.fetchRPC(svcID, rpcID)
-	if err != nil {
-		return err
-	}
-
-	req, err := CreateRequest(svcID, rpcID, input)
-	if err != nil {
-		return fmt.Errorf("request: %w", err)
-	}
-
-	resp, err := conn.DoRPC(ctx, req)
-	if err != nil {
-		return fmt.Errorf("rpc: %w", err)
-	}
-
-	err = processResponse(resp, output)
-	if err != nil {
-		return fmt.Errorf("response: %w", err)
-	}
-	return nil
-}
-
 func processResponse(in Response, out interface{}) error {
 	if in.payload != nil {
 		decode := decoderFunc(in.encoding, in.payload)
@@ -122,6 +91,18 @@ func processResponse(in Response, out interface{}) error {
 	return nil
 }
 
+// VerifyRPC returns an error if the svcID/rpcID pair
+// doesn't correspond to a registered RPC.
+func (p *Peer) VerifyRPC(svcID, rpcID ID) error {
+	p.once.Do(p.init)
+
+	// verify the RPC is part of registered RPCs
+	_, err := p.fetchRPC(svcID, rpcID)
+	return err
+}
+
+// CreateRequest marshals and wraps a generic input as
+// the payload in a new request
 func CreateRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 	data, err := protoMarshal(input)
 	if err != nil {
@@ -136,6 +117,7 @@ func CreateRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 	}, nil
 }
 
+// DoRequest sends a prepared request to the peer.
 func (p *Peer) DoRequest(ctx context.Context, req Request, output proto.Message) error {
 	p.once.Do(p.init)
 

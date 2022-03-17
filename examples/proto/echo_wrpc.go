@@ -12,13 +12,27 @@ type Echo interface {
 	Echo(context.Context, *wrpc.Peer, *EchoRPCRequest) (*EchoRPCResponse, error)
 }
 
+func PrepareEchoEchoRequest(in *EchoRPCRequest) (wrpc.Request, error) {
+	return wrpc.CreateRequest(1, 1, in)
+}
+
 type EchoClient struct {
 	Peer *wrpc.Peer
 }
 
 func (c *EchoClient) Echo(ctx context.Context, in *EchoRPCRequest) (*EchoRPCResponse, error) {
+	err := c.Peer.VerifyRPC(1, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := PrepareEchoEchoRequest(in)
+	if err != nil {
+		return nil, err
+	}
+
 	var out EchoRPCResponse
-	err := c.Peer.Do(ctx, 1, 1, in, &out)
+	err = c.Peer.DoRequest(ctx, req, &out)
 	if err != nil {
 		return nil, err
 	}

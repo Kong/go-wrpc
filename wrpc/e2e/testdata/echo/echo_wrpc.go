@@ -14,13 +14,35 @@ type Echo interface {
 	ProtocolError(context.Context, *wrpc.Peer, *ProtocolErrorRequest) (*ProtocolErrorResponse, error)
 }
 
+func PrepareEchoEchoRequest(in *EchoRPCRequest) (wrpc.Request, error) {
+	return wrpc.CreateRequest(1, 1, in)
+}
+
+func PrepareEchoSleepRequest(in *SleepRequest) (wrpc.Request, error) {
+	return wrpc.CreateRequest(1, 2, in)
+}
+
+func PrepareEchoProtocolErrorRequest(in *ProtocolErrorRequest) (wrpc.Request, error) {
+	return wrpc.CreateRequest(1, 3, in)
+}
+
 type EchoClient struct {
 	Peer *wrpc.Peer
 }
 
 func (c *EchoClient) Echo(ctx context.Context, in *EchoRPCRequest) (*EchoRPCResponse, error) {
+	err := c.Peer.VerifyRPC(1, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := PrepareEchoEchoRequest(in)
+	if err != nil {
+		return nil, err
+	}
+
 	var out EchoRPCResponse
-	err := c.Peer.Do(ctx, 1, 1, in, &out)
+	err = c.Peer.DoRequest(ctx, req, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +51,18 @@ func (c *EchoClient) Echo(ctx context.Context, in *EchoRPCRequest) (*EchoRPCResp
 }
 
 func (c *EchoClient) Sleep(ctx context.Context, in *SleepRequest) (*SleepResponse, error) {
+	err := c.Peer.VerifyRPC(1, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := PrepareEchoSleepRequest(in)
+	if err != nil {
+		return nil, err
+	}
+
 	var out SleepResponse
-	err := c.Peer.Do(ctx, 1, 2, in, &out)
+	err = c.Peer.DoRequest(ctx, req, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +71,18 @@ func (c *EchoClient) Sleep(ctx context.Context, in *SleepRequest) (*SleepRespons
 }
 
 func (c *EchoClient) ProtocolError(ctx context.Context, in *ProtocolErrorRequest) (*ProtocolErrorResponse, error) {
+	err := c.Peer.VerifyRPC(1, 3)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := PrepareEchoProtocolErrorRequest(in)
+	if err != nil {
+		return nil, err
+	}
+
 	var out ProtocolErrorResponse
-	err := c.Peer.Do(ctx, 1, 3, in, &out)
+	err = c.Peer.DoRequest(ctx, req, &out)
 	if err != nil {
 		return nil, err
 	}

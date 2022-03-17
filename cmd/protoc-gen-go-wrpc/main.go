@@ -74,6 +74,10 @@ func (g generator) genService(service *protogen.Service) error {
 	if err != nil {
 		return err
 	}
+	err = g.genPreparer(service)
+	if err != nil {
+		return err
+	}
 	err = g.genClient(service)
 	if err != nil {
 		return err
@@ -121,6 +125,43 @@ func (g generator) genServiceInterface(service *protogen.Service) error {
 	return nil
 }
 
+func (g generator) genPreparer(service *protogen.Service) error {
+	for _, rpc := range service.Methods {
+		err := g.genPrepareRequest(rpc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g generator) genPrepareRequest(rpc *protogen.Method) error {
+	serviceID, err := serviceID(rpc.Parent)
+	if err != nil {
+		return err
+	}
+	rpcID, err := rpcID(rpc)
+	if err != nil {
+		return err
+	}
+
+	req := g.gf.QualifiedGoIdent(rpc.Input.GoIdent)
+	retReq := g.gf.QualifiedGoIdent(protogen.GoIdent{
+		GoName: "Request", GoImportPath: wrpcImportPath,
+	})
+	createRequest := g.gf.QualifiedGoIdent(protogen.GoIdent{
+		GoName: "CreateRequest", GoImportPath: wrpcImportPath,
+	})
+
+	g.gf.P(fmt.Sprintf("func Prepare%s%sRequest(in *%s) (%s, error) {",
+		rpc.Parent.GoName, rpc.GoName, req, retReq))
+	g.gf.P(fmt.Sprintf("return %s(%v, %v, in)",
+		createRequest, serviceID, rpcID))
+	g.gf.P("}")
+	g.gf.P()
+	return nil
+}
+
 func (g generator) genClient(service *protogen.Service) error {
 	g.gf.P("type ", service.GoName, "Client struct{")
 	g.gf.P("Peer *",
@@ -154,11 +195,21 @@ func (g generator) genClientRPC(rpc *protogen.Method) error {
 		"in *%s) (*%s, error) {", rpc.Parent.GoName+"Client", rpc.GoName, req,
 		resp))
 
+	g.gf.P(fmt.Sprintf("err := c.Peer.VerifyRPC(%v, %v)", serviceID, rpcID))
+	g.gf.P("if err != nil {")
+	g.gf.P("return nil, err")
+	g.gf.P("}")
+	g.gf.P()
+
+	g.gf.P(fmt.Sprintf("req, err := Prepare%s%sRequest(in)", rpc.Parent.GoName, rpc.GoName))
+	g.gf.P("if err != nil {")
+	g.gf.P("return nil, err")
+	g.gf.P("}")
+	g.gf.P()
+
 	g.gf.P("var out ", resp)
 
-	g.gf.P(fmt.Sprintf("err := c.Peer.Do(ctx, %v, %v, in, &out)",
-		serviceID,
-		rpcID))
+	g.gf.P("err = c.Peer.DoRequest(ctx, req, &out)")
 
 	g.gf.P("if err != nil {")
 	g.gf.P("return nil, err")
