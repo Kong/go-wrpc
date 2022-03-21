@@ -66,8 +66,7 @@ func (p *Peer) Clone() *Peer {
 
 // Upgrade upgrades an HTTP connection to wRPC connection and starts tracking
 // the connection.
-func (p *Peer) Upgrade(w http.ResponseWriter,
-	r *http.Request) error {
+func (p *Peer) Upgrade(w http.ResponseWriter, r *http.Request) error {
 	p.once.Do(p.init)
 	u := Upgrader{}
 	c, err := u.Upgrade(w, r)
@@ -145,8 +144,7 @@ type Response struct {
 }
 
 // Handle is called by the underlying connection for every valid message.
-func (p *Peer) handle(ctx context.Context,
-	req Request) (Response, error) {
+func (p *Peer) handle(ctx context.Context, req Request) (Response, error) {
 	p.once.Do(p.init)
 	rpc, err := p.fetchRPC(req.svcID, req.rpcID)
 	if err != nil {
@@ -166,8 +164,7 @@ func (p *Peer) handle(ctx context.Context,
 	return resp, nil
 }
 
-func (p *Peer) invokeHandler(ctx context.Context, rpc RPC,
-	req Request) (Response, error) {
+func (p *Peer) invokeHandler(ctx context.Context, rpc RPC, req Request) (Response, error) {
 	decodeFunc := decoderFunc(req.encoding, req.payload)
 
 	result, err := rpc.Handler()(ctx, p, decodeFunc)

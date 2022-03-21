@@ -69,9 +69,7 @@ func (c *Conn) Close() error {
 // DoRPC invokes a request and returns the response.
 // The returned error signals a protocol error and not an application-layer
 // error.
-func (c *Conn) DoRPC(ctx context.Context,
-	req Request) (Response, error) {
-
+func (c *Conn) DoRPC(ctx context.Context, req Request) (Response, error) {
 	m := createRPCMessage(rpcMessageOpts{
 		svcID:    req.svcID,
 		rpcID:    req.rpcID,
@@ -109,8 +107,7 @@ func (c *Conn) DoRPC(ctx context.Context,
 	return Response{}, nil
 }
 
-func (c *Conn) sendRPCMessage(ctx context.Context,
-	m *WebsocketPayload) (chan *WebsocketPayload, func(), error) {
+func (c *Conn) sendRPCMessage(ctx context.Context, m *WebsocketPayload) (chan *WebsocketPayload, func(), error) {
 	var err error
 	select {
 	case <-ctx.Done():

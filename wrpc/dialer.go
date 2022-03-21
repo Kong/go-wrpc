@@ -26,8 +26,11 @@ func cloneHeader(h http.Header) http.Header {
 
 // Dial creates a new wRPC connection by calling DialContext with a
 // background context.
-func (d *Dialer) Dial(ctx context.Context, urlStr string,
-	requestHeader http.Header) (*Conn, *http.Response, error) {
+func (d *Dialer) Dial(
+	ctx context.Context,
+	urlStr string,
+	requestHeader http.Header,
+) (*Conn, *http.Response, error) {
 	requestHeader = cloneHeader(requestHeader)
 	requestHeader.Add(secWebsocketProtoHeaderKey, wrpcProtoHeader)
 
