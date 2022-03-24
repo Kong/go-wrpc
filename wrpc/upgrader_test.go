@@ -12,8 +12,7 @@ import (
 
 func TestUpgraderAndDialer(t *testing.T) {
 	t.Run("missing sec-websocket-protocol header results in an error ", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-			r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u := Upgrader{}
 			u.Upgrade(w, r)
 		}))
@@ -40,8 +39,7 @@ func TestUpgraderAndDialer(t *testing.T) {
 	})
 	t.Run("incorrect sec-websocket-protocol header results in an error ",
 		func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-				r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				u := Upgrader{}
 				u.Upgrade(w, r)
 			}))
@@ -70,8 +68,7 @@ func TestUpgraderAndDialer(t *testing.T) {
 		})
 	t.Run("correct sec-websocket-protocol header results in a successful"+
 		" upgrade", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-			r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u := Upgrader{}
 			u.Upgrade(w, r)
 		}))

@@ -11,7 +11,7 @@ import (
 
 type echo struct{}
 
-func (e echo) Echo(_ context.Context, req *proto.EchoRPCRequest) (
+func (e echo) Echo(_ context.Context, peer *wrpc.Peer, req *proto.EchoRPCRequest) (
 	*proto.EchoRPCResponse,
 	error) {
 	log.Println("request:", req.S)
@@ -32,7 +32,8 @@ func main() {
 	}
 
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-		err := peer.Upgrade(w, r)
+		p2 := peer.Clone()
+		err := p2.Upgrade(w, r)
 		if err != nil {
 			log.Print("upgrade:", err)
 			return

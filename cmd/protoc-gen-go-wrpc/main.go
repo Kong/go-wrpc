@@ -74,6 +74,10 @@ func (g generator) genService(service *protogen.Service) error {
 	if err != nil {
 		return err
 	}
+	err = g.genPreparer(service)
+	if err != nil {
+		return err
+	}
 	err = g.genClient(service)
 	if err != nil {
 		return err
@@ -95,11 +99,14 @@ func (g generator) genRPC(rpc *protogen.Method) error {
 		GoName:       "Context",
 		GoImportPath: "context",
 	})
+	p := g.gf.QualifiedGoIdent(protogen.GoIdent{
+		GoName: "Peer", GoImportPath: wrpcImportPath,
+	})
 	req := g.gf.QualifiedGoIdent(rpc.Input.GoIdent)
 	resp := g.gf.QualifiedGoIdent(rpc.Output.GoIdent)
 
-	g.gf.P(fmt.Sprintf("%s(%s, *%s) (*%s, %s)", rpc.GoName,
-		c, req, resp, "error",
+	g.gf.P(fmt.Sprintf("%s(%s, *%s, *%s) (*%s, %s)", rpc.GoName,
+		c, p, req, resp, "error",
 	))
 	return nil
 }
@@ -114,6 +121,43 @@ func (g generator) genServiceInterface(service *protogen.Service) error {
 	}
 	g.gf.P("}")
 
+	g.gf.P()
+	return nil
+}
+
+func (g generator) genPreparer(service *protogen.Service) error {
+	for _, rpc := range service.Methods {
+		err := g.genPrepareRequest(rpc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g generator) genPrepareRequest(rpc *protogen.Method) error {
+	serviceID, err := serviceID(rpc.Parent)
+	if err != nil {
+		return err
+	}
+	rpcID, err := rpcID(rpc)
+	if err != nil {
+		return err
+	}
+
+	req := g.gf.QualifiedGoIdent(rpc.Input.GoIdent)
+	retReq := g.gf.QualifiedGoIdent(protogen.GoIdent{
+		GoName: "Request", GoImportPath: wrpcImportPath,
+	})
+	createRequest := g.gf.QualifiedGoIdent(protogen.GoIdent{
+		GoName: "CreateRequest", GoImportPath: wrpcImportPath,
+	})
+
+	g.gf.P(fmt.Sprintf("func Prepare%s%sRequest(in *%s) (%s, error) {",
+		rpc.Parent.GoName, rpc.GoName, req, retReq))
+	g.gf.P(fmt.Sprintf("return %s(%v, %v, in)",
+		createRequest, serviceID, rpcID))
+	g.gf.P("}")
 	g.gf.P()
 	return nil
 }
@@ -151,11 +195,21 @@ func (g generator) genClientRPC(rpc *protogen.Method) error {
 		"in *%s) (*%s, error) {", rpc.Parent.GoName+"Client", rpc.GoName, req,
 		resp))
 
+	g.gf.P(fmt.Sprintf("err := c.Peer.VerifyRPC(%v, %v)", serviceID, rpcID))
+	g.gf.P("if err != nil {")
+	g.gf.P("return nil, err")
+	g.gf.P("}")
+	g.gf.P()
+
+	g.gf.P(fmt.Sprintf("req, err := Prepare%s%sRequest(in)", rpc.Parent.GoName, rpc.GoName))
+	g.gf.P("if err != nil {")
+	g.gf.P("return nil, err")
+	g.gf.P("}")
+	g.gf.P()
+
 	g.gf.P("var out ", resp)
 
-	g.gf.P(fmt.Sprintf("err := c.Peer.Do(ctx, %v, %v, in, &out)",
-		serviceID,
-		rpcID))
+	g.gf.P("err = c.Peer.DoRequest(ctx, req, &out)")
 
 	g.gf.P("if err != nil {")
 	g.gf.P("return nil, err")
@@ -216,7 +270,7 @@ func (g generator) genServerRPCCase(rpc *protogen.Method) error {
 	}
 	g.gf.P(fmt.Sprintf("case %v:", rpcID))
 	g.gf.P("return wrpc.RPCImpl{")
-	g.gf.P("HandlerFunc: func(ctx context.Context, " +
+	g.gf.P("HandlerFunc: func(ctx context.Context, peer *wrpc.Peer, " +
 		"decode func(interface{}) error) (interface{}, error) {")
 
 	req := g.gf.QualifiedGoIdent(rpc.Input.GoIdent)
@@ -226,7 +280,7 @@ func (g generator) genServerRPCCase(rpc *protogen.Method) error {
 	g.gf.P("if err != nil {")
 	g.gf.P("return nil,err")
 	g.gf.P("}")
-	g.gf.P(fmt.Sprintf("return s.%s.%s(ctx,&in)", rpc.Parent.GoName,
+	g.gf.P(fmt.Sprintf("return s.%s.%s(ctx, peer, &in)", rpc.Parent.GoName,
 		rpc.GoName))
 
 	g.gf.P("},")
@@ -243,7 +297,7 @@ var (
 func serviceID(service *protogen.Service) (uint32, error) {
 	id, err := findID(service.Comments.Leading, svcRegex)
 	if err != nil {
-		return 0, fmt.Errorf("wRPC ID for service '%v': %v",
+		return 0, fmt.Errorf("wRPC ID for service '%v': %w",
 			service.GoName, err)
 	}
 	return id, nil
@@ -252,7 +306,7 @@ func serviceID(service *protogen.Service) (uint32, error) {
 func rpcID(rpc *protogen.Method) (uint32, error) {
 	id, err := findID(rpc.Comments.Leading, rpcRegex)
 	if err != nil {
-		return 0, fmt.Errorf("wRPC ID for rpc '%v': %v",
+		return 0, fmt.Errorf("wRPC ID for rpc '%v': %w",
 			rpc.GoName, err)
 	}
 	return id, nil

@@ -58,8 +58,7 @@ func TestConnReadThread(t *testing.T) {
 		func(t *testing.T) {
 			t.Skip()
 			// setup server
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-				r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var u Upgrader
 				u.Upgrade(w, r)
 			}))
@@ -110,8 +109,7 @@ func TestLocalAndRemoteAddr(t *testing.T) {
 func setup() (*Peer, *Conn, func(), error) {
 	// setup server
 	serverPeer := &Peer{}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-		r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		serverPeer.Upgrade(w, r)
 	}))
 	defer server.Close()

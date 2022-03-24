@@ -26,7 +26,7 @@ type RPC interface {
 // decoder function is used to unmarshal the request.
 // The handler must return the response of the interface and any error.
 // Error must not be used to signal application-level failures.
-type Handler func(ctx context.Context, decoder func(interface{}) error) (
+type Handler func(ctx context.Context, peer *Peer, decoder func(interface{}) error) (
 	interface{}, error)
 
 // ServiceImpl implements Service

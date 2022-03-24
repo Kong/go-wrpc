@@ -18,19 +18,22 @@ type echoImpl struct {
 }
 
 func (e echoImpl) ProtocolError(_ context.Context,
-	_ *echo.ProtocolErrorRequest) (*echo.ProtocolErrorResponse, error) {
+	peer *wrpc.Peer, _ *echo.ProtocolErrorRequest,
+) (*echo.ProtocolErrorResponse, error) {
 	return nil, fmt.Errorf("to err is code")
 }
 
-func (e echoImpl) Sleep(_ context.Context, request *echo.SleepRequest) (
-	*echo.SleepResponse, error) {
+func (e echoImpl) Sleep(_ context.Context,
+	peer *wrpc.Peer,
+	request *echo.SleepRequest,
+) (*echo.SleepResponse, error) {
 	time.Sleep(time.Duration(request.Duration) * time.Second)
 	return &echo.SleepResponse{}, nil
 }
 
-func (e echoImpl) Echo(_ context.Context, req *echo.EchoRPCRequest) (
-	*echo.EchoRPCResponse,
-	error) {
+func (e echoImpl) Echo(_ context.Context,
+	peer *wrpc.Peer, req *echo.EchoRPCRequest,
+) (*echo.EchoRPCResponse, error) {
 	return &echo.EchoRPCResponse{
 		S: e.prefix + req.S,
 	}, nil
@@ -47,8 +50,7 @@ func TestEcho(t *testing.T) {
 		if err != nil {
 			t.Fatalf("server failed to register Echo Service:%v", err)
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-			r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			serverPeer.Upgrade(w, r)
 		}))
 		defer server.Close()
@@ -84,8 +86,7 @@ func TestEcho(t *testing.T) {
 		func(t *testing.T) {
 			// setup server
 			serverPeer := &wrpc.Peer{}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-				r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				serverPeer.Upgrade(w, r)
 			}))
 			defer server.Close()
@@ -123,8 +124,7 @@ func TestEcho(t *testing.T) {
 			if err != nil {
 				t.Fatalf("server failed to register Echo Service:%v", err)
 			}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-				r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				serverPeer.Upgrade(w, r)
 			}))
 			defer server.Close()
@@ -158,8 +158,7 @@ func TestEcho(t *testing.T) {
 			if err != nil {
 				t.Fatalf("server failed to register Echo Service:%v", err)
 			}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-				r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				serverPeer.Upgrade(w, r)
 			}))
 			defer server.Close()
@@ -198,8 +197,7 @@ func TestEcho(t *testing.T) {
 		if err != nil {
 			t.Fatalf("server failed to register Echo Service:%v", err)
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-			r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			serverPeer.Upgrade(w, r)
 		}))
 		defer server.Close()
@@ -241,8 +239,7 @@ func BenchmarkEcho(b *testing.B) {
 		if err != nil {
 			b.Fatalf("server failed to register Echo Service:%v", err)
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
-			r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			serverPeer.Upgrade(w, r)
 		}))
 		defer server.Close()

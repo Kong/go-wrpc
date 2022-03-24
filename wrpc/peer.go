@@ -45,17 +45,28 @@ func (p *Peer) AddConn(conn *Conn) {
 	go func() {
 		err := p.conn.readThread()
 		if err != nil {
-			p.ErrLogger(fmt.Errorf("read thread: %v", err))
+			p.ErrLogger(fmt.Errorf("read thread: %w", err))
 		}
 		// TODO(hbagdi): handle error
 		_ = p.conn.Close()
 	}()
 }
 
+// Clone returns a new Peer with the same registry and logger, ready
+// for either AddConn() or Upgrade()
+func (p *Peer) Clone() *Peer {
+	p.once.Do(p.init)
+	p2 := &Peer{
+		registry:  p.registry,
+		ErrLogger: p.ErrLogger,
+	}
+	p2.once.Do(func() {})
+	return p2
+}
+
 // Upgrade upgrades an HTTP connection to wRPC connection and starts tracking
 // the connection.
-func (p *Peer) Upgrade(w http.ResponseWriter,
-	r *http.Request) error {
+func (p *Peer) Upgrade(w http.ResponseWriter, r *http.Request) error {
 	p.once.Do(p.init)
 	u := Upgrader{}
 	c, err := u.Upgrade(w, r)
@@ -71,37 +82,6 @@ func (p *Peer) fetchRPC(svcID, rpcID ID) (RPC, error) {
 	return p.registry.Get(svcID, rpcID)
 }
 
-// Do an RPC to the other side using svcID, rpcID,
-// input and returns the output.
-func (p *Peer) Do(ctx context.Context, svcID, rpcID ID, input,
-	output proto.Message) error {
-	p.once.Do(p.init)
-	var err error
-	conn := p.conn
-
-	// verify the RPC is part of registered RPCs
-	_, err = p.fetchRPC(svcID, rpcID)
-	if err != nil {
-		return err
-	}
-
-	req, err := createRequest(svcID, rpcID, input)
-	if err != nil {
-		return fmt.Errorf("request: %v", err)
-	}
-
-	resp, err := conn.DoRPC(ctx, req)
-	if err != nil {
-		return fmt.Errorf("rpc: %v", err)
-	}
-
-	err = processResponse(resp, output)
-	if err != nil {
-		return fmt.Errorf("response: %v", err)
-	}
-	return nil
-}
-
 func processResponse(in Response, out interface{}) error {
 	if in.payload != nil {
 		decode := decoderFunc(in.encoding, in.payload)
@@ -110,7 +90,19 @@ func processResponse(in Response, out interface{}) error {
 	return nil
 }
 
-func createRequest(svcID, rpcID ID, input interface{}) (Request, error) {
+// VerifyRPC returns an error if the svcID/rpcID pair
+// doesn't correspond to a registered RPC.
+func (p *Peer) VerifyRPC(svcID, rpcID ID) error {
+	p.once.Do(p.init)
+
+	// verify the RPC is part of registered RPCs
+	_, err := p.fetchRPC(svcID, rpcID)
+	return err
+}
+
+// CreateRequest marshals and wraps a generic input as
+// the payload in a new request
+func CreateRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 	data, err := protoMarshal(input)
 	if err != nil {
 		return Request{}, err
@@ -122,6 +114,22 @@ func createRequest(svcID, rpcID ID, input interface{}) (Request, error) {
 		encoding: Encoding_ENCODING_PROTO3,
 		payload:  data,
 	}, nil
+}
+
+// DoRequest sends a prepared request to the peer.
+func (p *Peer) DoRequest(ctx context.Context, req Request, output proto.Message) error {
+	p.once.Do(p.init)
+
+	resp, err := p.conn.DoRPC(ctx, req)
+	if err != nil {
+		return fmt.Errorf("rpc: %w", err)
+	}
+
+	err = processResponse(resp, output)
+	if err != nil {
+		return fmt.Errorf("response: %w", err)
+	}
+	return nil
 }
 
 type Request struct {
@@ -136,8 +144,7 @@ type Response struct {
 }
 
 // Handle is called by the underlying connection for every valid message.
-func (p *Peer) handle(ctx context.Context,
-	req Request) (Response, error) {
+func (p *Peer) handle(ctx context.Context, req Request) (Response, error) {
 	p.once.Do(p.init)
 	rpc, err := p.fetchRPC(req.svcID, req.rpcID)
 	if err != nil {
@@ -157,11 +164,10 @@ func (p *Peer) handle(ctx context.Context,
 	return resp, nil
 }
 
-func (p *Peer) invokeHandler(ctx context.Context, rpc RPC,
-	req Request) (Response, error) {
+func (p *Peer) invokeHandler(ctx context.Context, rpc RPC, req Request) (Response, error) {
 	decodeFunc := decoderFunc(req.encoding, req.payload)
 
-	result, err := rpc.Handler()(ctx, decodeFunc)
+	result, err := rpc.Handler()(ctx, p, decodeFunc)
 	if err != nil {
 		return Response{}, err
 	}
