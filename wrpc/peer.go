@@ -3,6 +3,7 @@ package wrpc
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 
@@ -26,6 +27,20 @@ func (p *Peer) init() {
 	if p.ErrLogger == nil {
 		p.ErrLogger = func(error) {}
 	}
+}
+
+func (p *Peer) Close() error {
+	if p.conn == nil {
+		return nil
+	}
+	return p.conn.Close()
+}
+
+func (p *Peer) RemoteAddr() net.Addr {
+	if p.conn == nil {
+		return nil
+	}
+	return p.conn.RemoteAddr()
 }
 
 // Register registers a Service for communication.
