@@ -21,8 +21,8 @@ type Peer struct {
 
 	ErrLogger func(error)
 	// CloseCallbackFunc if set, called after closing the connection.
-	// If it was closed because of an error, it's passed here.
-	// Otherwise, it's the return of close itself (probably nil too)
+	// If it was closed because of a read error, it's passed here.
+	// Otherwise, the error from connection close is returned.
 	CloseCallbackFunc func(*Peer, error)
 }
 
