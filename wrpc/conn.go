@@ -63,6 +63,15 @@ func (c *Conn) Close() error {
 		// TODO(hbagdi): error is being lost here, handle it
 		return c.wbConn.Close()
 	}
+
+	c.inflight.Range(func(key, value interface{}) bool {
+		c.inflight.Delete(key)
+		if resultChan, ok := value.(chan *WebsocketPayload); ok {
+			close(resultChan)
+		}
+		return true
+	})
+
 	return nil
 }
 
@@ -125,11 +134,15 @@ func (c *Conn) sendRPCMessage(ctx context.Context, m *WebsocketPayload) (chan *W
 
 	err = validateMessage(m)
 	if err != nil {
+		close(resultChan)
+		cleanup()
 		return nil, nil, fmt.Errorf("invalid wRPC message: %w", err)
 	}
 
 	err = c.writeMessage(ctx, m)
 	if err != nil {
+		close(resultChan)
+		cleanup()
 		return nil, nil, fmt.Errorf("write message to socket: %w", err)
 	}
 	return resultChan, cleanup, nil
