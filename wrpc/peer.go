@@ -20,6 +20,8 @@ type Peer struct {
 	registry *serviceRegistry
 
 	ErrLogger func(error)
+	// ClosedCallbackFunc if set, called after closing the connection.
+	ClosedCallbackFunc func(*Peer)
 }
 
 func (p *Peer) init() {
@@ -58,12 +60,16 @@ func (p *Peer) AddConn(conn *Conn) {
 
 	p.conn = conn
 	go func() {
-		err := p.conn.readThread()
-		if err != nil {
+		if err := p.conn.readThread(); err != nil {
 			p.ErrLogger(fmt.Errorf("read thread: %w", err))
 		}
-		// TODO(hbagdi): handle error
-		_ = p.conn.Close()
+		if err := p.conn.Close(); err != nil {
+			p.ErrLogger(fmt.Errorf("closing wrpc connection: %w", err))
+		}
+
+		if p.ClosedCallbackFunc != nil {
+			p.ClosedCallbackFunc(p)
+		}
 	}()
 }
 
