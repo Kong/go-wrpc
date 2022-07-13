@@ -19,9 +19,9 @@ type Peer struct {
 	conn     *Conn
 	registry *serviceRegistry
 
-	// ErrLogger is called when the connection is closed,
-	// the argument can be nil if it was closed cleanly.
 	ErrLogger func(error)
+	// ClosedCallbackFunc if set, called after closing the connection.
+	ClosedCallbackFunc func(*Peer)
 }
 
 func (p *Peer) init() {
@@ -60,16 +60,15 @@ func (p *Peer) AddConn(conn *Conn) {
 
 	p.conn = conn
 	go func() {
-		err := p.conn.readThread()
-		if err != nil {
+		if err := p.conn.readThread(); err != nil {
 			p.ErrLogger(fmt.Errorf("read thread: %w", err))
 		}
-		err2 := p.conn.Close()
-		if err2 != nil {
-			p.ErrLogger(fmt.Errorf("closing wrpc connection: %w", err2))
+		if err := p.conn.Close(); err != nil {
+			p.ErrLogger(fmt.Errorf("closing wrpc connection: %w", err))
 		}
-		if err == nil && err2 == nil {
-			p.ErrLogger(nil)
+
+		if p.ClosedCallbackFunc != nil {
+			p.ClosedCallbackFunc(p)
 		}
 	}()
 }
